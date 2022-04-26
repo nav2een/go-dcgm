@@ -25,7 +25,7 @@ func getSupportedMetricGroups(grpid uint) (groups []MetricGroup, err error) {
 	result := C.dcgmProfGetSupportedMetricGroups(handle.handle, &groupInfo)
 
 	if err = errorString(result); err != nil {
-		return groups, fmt.Errorf("Error getting supported metrics: %s", err)
+		return groups, fmt.Errorf("error getting supported metrics: %s", err)
 	}
 
 	var count = uint(groupInfo.numMetricGroups)

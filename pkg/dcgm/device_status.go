@@ -128,7 +128,7 @@ func latestValuesForDevice(gpuId uint) (status DeviceStatus, err error) {
 	if err != nil {
 		_ = FieldGroupDestroy(fieldsId)
 		_ = DestroyGroup(groupId)
-		return status, fmt.Errorf("Error getting device status: %s", err)
+		return status, fmt.Errorf("error getting device status: %s", err)
 	}
 
 	power := values[pwr].Float64()

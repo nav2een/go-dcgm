@@ -102,13 +102,13 @@ func shutdown() (err error) {
 func startEmbedded() (err error) {
 	result := C.dcgmInit()
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error initializing DCGM: %s", err)
+		return fmt.Errorf("error initializing DCGM: %s", err)
 	}
 
 	var cHandle C.dcgmHandle_t
 	result = C.dcgmStartEmbedded(C.DCGM_OPERATION_MODE_AUTO, &cHandle)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error starting nv-hostengine: %s", err)
+		return fmt.Errorf("error starting nv-hostengine: %s", err)
 	}
 	handle = dcgmHandle{cHandle}
 	return
@@ -117,24 +117,24 @@ func startEmbedded() (err error) {
 func stopEmbedded() (err error) {
 	result := C.dcgmStopEmbedded(handle.handle)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error stopping nv-hostengine: %s", err)
+		return fmt.Errorf("error stopping nv-hostengine: %s", err)
 	}
 
 	result = C.dcgmShutdown()
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error shutting down DCGM: %s", err)
+		return fmt.Errorf("error shutting down DCGM: %s", err)
 	}
 	return
 }
 
 func connectStandalone(args ...string) (err error) {
 	if len(args) < 2 {
-		return fmt.Errorf("Missing dcgm address and / or port")
+		return fmt.Errorf("missing dcgm address and / or port")
 	}
 
 	result := C.dcgmInit()
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error initializing DCGM: %s", err)
+		return fmt.Errorf("error initializing DCGM: %s", err)
 	}
 
 	var cHandle C.dcgmHandle_t
@@ -145,13 +145,13 @@ func connectStandalone(args ...string) (err error) {
 
 	sck, err := strconv.ParseUint(args[1], 10, 32)
 	if err != nil {
-		return fmt.Errorf("Error parsing %s: %v\n", args[1], err)
+		return fmt.Errorf("error parsing %s: %v", args[1], err)
 	}
 	connectParams.addressIsUnixSocket = C.uint(sck)
 
 	result = C.dcgmConnect_v2(addr, &connectParams, &cHandle)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error connecting to nv-hostengine: %s", err)
+		return fmt.Errorf("error connecting to nv-hostengine: %s", err)
 	}
 
 	handle = dcgmHandle{cHandle}
@@ -160,7 +160,7 @@ func connectStandalone(args ...string) (err error) {
 	/*
 		err = checkHostengineVersion()
 		if err != nil {
-			return fmt.Errorf("Error connecting to remote nv-hostengine: %s", err)
+			return fmt.Errorf("error connecting to remote nv-hostengine: %s", err)
 		}
 	*/
 
@@ -170,12 +170,12 @@ func connectStandalone(args ...string) (err error) {
 func disconnectStandalone() (err error) {
 	result := C.dcgmDisconnect(handle.handle)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error disconnecting from nv-hostengine: %s", err)
+		return fmt.Errorf("error disconnecting from nv-hostengine: %s", err)
 	}
 
 	result = C.dcgmShutdown()
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error shutting down DCGM: %s", err)
+		return fmt.Errorf("error shutting down DCGM: %s", err)
 	}
 	return
 }
@@ -183,7 +183,7 @@ func disconnectStandalone() (err error) {
 func startHostengine() (err error) {
 	bin, err := exec.LookPath("nv-hostengine")
 	if err != nil {
-		return fmt.Errorf("Error finding nv-hostengine: %s", err)
+		return fmt.Errorf("error finding nv-hostengine: %s", err)
 	}
 	var procAttr syscall.ProcAttr
 	procAttr.Files = []uintptr{
@@ -195,7 +195,7 @@ func startHostengine() (err error) {
 	dir := "/tmp"
 	tmpfile, err := ioutil.TempFile(dir, "dcgm")
 	if err != nil {
-		return fmt.Errorf("Error creating temporary file in %s directory: %s", dir, err)
+		return fmt.Errorf("error creating temporary file in %s directory: %s", dir, err)
 	}
 	socketPath := tmpfile.Name()
 	defer os.Remove(socketPath)
@@ -203,12 +203,12 @@ func startHostengine() (err error) {
 	connectArg := "--domain-socket"
 	hostengineAsChildPid, err = syscall.ForkExec(bin, []string{bin, connectArg, socketPath}, &procAttr)
 	if err != nil {
-		return fmt.Errorf("Error fork-execing nv-hostengine: %s", err)
+		return fmt.Errorf("error fork-execing nv-hostengine: %s", err)
 	}
 
 	result := C.dcgmInit()
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error initializing DCGM: %s", err)
+		return fmt.Errorf("error initializing DCGM: %s", err)
 	}
 
 	var cHandle C.dcgmHandle_t
@@ -220,7 +220,7 @@ func startHostengine() (err error) {
 	defer freeCString(cSockPath)
 	result = C.dcgmConnect_v2(cSockPath, &connectParams, &cHandle)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error connecting to nv-hostengine: %s", err)
+		return fmt.Errorf("error connecting to nv-hostengine: %s", err)
 	}
 
 	handle = dcgmHandle{cHandle}
@@ -235,7 +235,7 @@ func stopHostengine() (err error) {
 	// terminate nv-hostengine
 	cmd := exec.Command("nv-hostengine", "--term")
 	if err = cmd.Run(); err != nil {
-		return fmt.Errorf("Error terminating nv-hostengine: %s", err)
+		return fmt.Errorf("error terminating nv-hostengine: %s", err)
 	}
 	log.Println("Successfully terminated nv-hostengine.")
 
@@ -247,14 +247,14 @@ func checkHostengineVersion() (err error) {
 	hostEngineVersionInfo.version = makeVersion2(unsafe.Sizeof(hostEngineVersionInfo))
 	result := C.dcgmHostengineVersionInfo(handle.handle, &hostEngineVersionInfo)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Could not retrieve running hostengine version: %s", err)
+		return fmt.Errorf("could not retrieve running hostengine version: %s", err)
 	}
 
 	var versionInfo C.dcgmVersionInfo_t
 	versionInfo.version = makeVersion2(unsafe.Sizeof(versionInfo))
 	result = C.dcgmVersionInfo(&versionInfo)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Could not retrieve dcgm version: %s", err)
+		return fmt.Errorf("could not retrieve dcgm version: %s", err)
 	}
 
 	/* Version string looks like: "version:2.1.2;arch:x86_64;buildtype:Debug;
@@ -276,8 +276,8 @@ func checkHostengineVersion() (err error) {
 		}
 	}
 
-	if foundVersion == false {
-		return fmt.Errorf("Could not determine remote version")
+	if !foundVersion {
+		return fmt.Errorf("could not determine remote version")
 	}
 
 	foundVersion = false
@@ -290,8 +290,8 @@ func checkHostengineVersion() (err error) {
 		}
 	}
 
-	if foundVersion == false {
-		return fmt.Errorf("Could not determine local version")
+	if !foundVersion {
+		return fmt.Errorf("could not determine local version")
 	}
 
 	// Parse out version and compare
@@ -299,16 +299,16 @@ func checkHostengineVersion() (err error) {
 	my = strings.Split(myVersionStr, ":")
 
 	if (len(he) != 2) && (len(my) != 2) {
-		return fmt.Errorf("Could not parse versions")
+		return fmt.Errorf("could not parse versions")
 	}
 
 	heVersion, err := semver.NewVersion(he[1])
 	if err != nil {
-		return fmt.Errorf("Could not determine remote version: %s", err)
+		return fmt.Errorf("could not determine remote version: %s", err)
 	}
 	myVersion, err := semver.NewVersion(my[1])
 	if err != nil {
-		return fmt.Errorf("Could not determine local version: %s", err)
+		return fmt.Errorf("could not determine local version: %s", err)
 	}
 	if heVersion.Major() != myVersion.Major() {
 		return fmt.Errorf("remote %v != local %v", he[1], my[1])

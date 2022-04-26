@@ -7,9 +7,17 @@ package dcgm
 import "C"
 import (
 	"fmt"
+	"unsafe"
 )
 
 type GroupHandle struct{ handle C.dcgmGpuGrp_t }
+
+type Group struct {
+	Count      uint
+	EntityList []GroupEntityPair
+	GroupName  string
+	Version    uint
+}
 
 func CreateGroup(groupName string) (goGroupId GroupHandle, err error) {
 	var cGroupId C.dcgmGpuGrp_t
@@ -18,7 +26,7 @@ func CreateGroup(groupName string) (goGroupId GroupHandle, err error) {
 
 	result := C.dcgmGroupCreate(handle.handle, C.DCGM_GROUP_EMPTY, cname, &cGroupId)
 	if err = errorString(result); err != nil {
-		return goGroupId, fmt.Errorf("Error creating group: %s", err)
+		return goGroupId, fmt.Errorf("error creating group: %s", err)
 	}
 
 	goGroupId = GroupHandle{cGroupId}
@@ -33,7 +41,7 @@ func NewDefaultGroup(groupName string) (GroupHandle, error) {
 
 	result := C.dcgmGroupCreate(handle.handle, C.DCGM_GROUP_DEFAULT, cname, &cGroupId)
 	if err := errorString(result); err != nil {
-		return GroupHandle{}, fmt.Errorf("Error creating group: %s", err)
+		return GroupHandle{}, fmt.Errorf("error creating group: %s", err)
 	}
 
 	return GroupHandle{cGroupId}, nil
@@ -42,7 +50,7 @@ func NewDefaultGroup(groupName string) (GroupHandle, error) {
 func AddToGroup(groupId GroupHandle, gpuId uint) (err error) {
 	result := C.dcgmGroupAddDevice(handle.handle, groupId.handle, C.uint(gpuId))
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error adding GPU %v to group: %s", gpuId, err)
+		return fmt.Errorf("error adding GPU %v to group: %s", gpuId, err)
 	}
 
 	return
@@ -51,7 +59,7 @@ func AddToGroup(groupId GroupHandle, gpuId uint) (err error) {
 func AddEntityToGroup(groupId GroupHandle, entityGroupId Field_Entity_Group, entityId uint) (err error) {
 	result := C.dcgmGroupAddEntity(handle.handle, groupId.handle, C.dcgm_field_entity_group_t(entityGroupId), C.uint(entityId))
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error adding entity group type %v, entity %v to group: %s", entityGroupId, entityId, err)
+		return fmt.Errorf("error adding entity group type %v, entity %v to group: %s", entityGroupId, entityId, err)
 	}
 
 	return
@@ -60,8 +68,45 @@ func AddEntityToGroup(groupId GroupHandle, entityGroupId Field_Entity_Group, ent
 func DestroyGroup(groupId GroupHandle) (err error) {
 	result := C.dcgmGroupDestroy(handle.handle, groupId.handle)
 	if err = errorString(result); err != nil {
-		return fmt.Errorf("Error destroying group: %s", err)
+		return fmt.Errorf("error destroying group: %s", err)
 	}
 
+	return
+}
+
+func GroupGetAllIds() (groups []uint64, err error) {
+	var groupIdList [100]C.ulong
+	var count C.uint
+
+	result := C.dcgmGroupGetAllIds(handle.handle, &groupIdList[0], &count)
+	if err := errorString(result); err != nil {
+		return groups, fmt.Errorf("error getting groups count: %s", err)
+	}
+	numGroups := int(count)
+	groups = make([]uint64, numGroups)
+	for i := 0; i < numGroups; i++ {
+		groups[i] = uint64(groupIdList[i])
+	}
+	return
+}
+
+func GroupGetInfo(groupId uint64) (groupInfo Group, err error) {
+	var group C.dcgmGroupInfo_t
+	group.version = makeVersion2(unsafe.Sizeof(group))
+	result := C.dcgmGroupGetInfo(handle.handle, C.dcgmGpuGrp_t(groupId), &group)
+	if err = errorString(result); err != nil {
+		return groupInfo, fmt.Errorf("error getting group information: %s", err)
+	}
+	entityList := make([]GroupEntityPair, len(group.entityList))
+	for _, entity := range group.entityList {
+		entityList = append(entityList, GroupEntityPair{EntityGroupId: Field_Entity_Group(entity.entityGroupId), EntityId: uint(entity.entityId)})
+	}
+	groupName := *stringPtr(&group.groupName[0])
+	groupInfo = Group{
+		Count:      uint(group.count),
+		EntityList: entityList,
+		GroupName:  groupName,
+		Version:    uint(group.version),
+	}
 	return
 }

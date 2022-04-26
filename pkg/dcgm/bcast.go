@@ -53,7 +53,7 @@ func (p *publisher) remove(leaving *subscriber) error {
 		}
 	}
 	if subscriberIndex == -1 {
-		return fmt.Errorf("Could not find subscriber")
+		return fmt.Errorf("could not find subscriber")
 	}
 	go func() { leaving.close <- true }()
 	p.subscribers = append(p.subscribers[:subscriberIndex], p.subscribers[subscriberIndex+1:]...)

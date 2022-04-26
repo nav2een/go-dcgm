@@ -3,10 +3,14 @@ package dcgm
 /*
 #include "dcgm_agent.h"
 #include "dcgm_structs.h"
+
+// wrapper for go callback function
+extern int listFieldValues_cgo(dcgm_field_entity_group_t entityGroupId, dcgm_field_eid_t entityId, dcgmFieldValue_v1 *values, int numValues, void *userData);
 */
 import "C"
 import (
 	"fmt"
+	"runtime/cgo"
 	"unicode"
 	"unsafe"
 )
@@ -29,6 +33,20 @@ type FieldMeta struct {
 
 type FieldHandle struct{ handle C.dcgmFieldGrp_t }
 
+type FieldGroup struct {
+	Id          uint64
+	Name        string
+	FieldIds    []uint
+	NumFieldIds uint
+	Version     uint
+}
+
+type FieldGroups struct {
+	Version        uint
+	NumFieldGroups uint
+	FieldGroups    []FieldGroup
+}
+
 func FieldGroupCreate(fieldsGroupName string, fields []Short) (fieldsId FieldHandle, err error) {
 	var fieldsGroup C.dcgmFieldGrp_t
 	cfields := *(*[]C.ushort)(unsafe.Pointer(&fields))
@@ -38,7 +56,7 @@ func FieldGroupCreate(fieldsGroupName string, fields []Short) (fieldsId FieldHan
 
 	result := C.dcgmFieldGroupCreate(handle.handle, C.int(len(fields)), &cfields[0], groupName, &fieldsGroup)
 	if err = errorString(result); err != nil {
-		return fieldsId, fmt.Errorf("Error creating DCGM fields group: %s", err)
+		return fieldsId, fmt.Errorf("error creating DCGM fields group: %s", err)
 	}
 
 	fieldsId = FieldHandle{fieldsGroup}
@@ -48,9 +66,35 @@ func FieldGroupCreate(fieldsGroupName string, fields []Short) (fieldsId FieldHan
 func FieldGroupDestroy(fieldsGroup FieldHandle) (err error) {
 	result := C.dcgmFieldGroupDestroy(handle.handle, fieldsGroup.handle)
 	if err = errorString(result); err != nil {
-		fmt.Errorf("Error destroying DCGM fields group: %s", err)
+		return fmt.Errorf("error destroying DCGM fields group: %s", err)
 	}
+	return
+}
 
+func FieldGroupGetAll() (fieldGroups FieldGroups, err error) {
+	var allGroupInfo C.dcgmAllFieldGroup_t
+	allGroupInfo.version = makeVersion1(unsafe.Sizeof(allGroupInfo))
+	result := C.dcgmFieldGroupGetAll(handle.handle, &allGroupInfo)
+	if err = errorString(result); err != nil {
+		return fieldGroups, fmt.Errorf("error getting field groups: %s", err)
+	}
+	fieldGroups = FieldGroups{
+		Version:        uint(allGroupInfo.version),
+		NumFieldGroups: uint(allGroupInfo.numFieldGroups),
+		FieldGroups:    make([]FieldGroup, uint(allGroupInfo.numFieldGroups)),
+	}
+	for _, fieldGroup := range allGroupInfo.fieldGroups {
+		numFields := int(fieldGroup.numFieldIds)
+		fieldIds := make([]uint, numFields)
+		for i := 0; i < numFields; i++ {
+			fieldIds[i] = uint(fieldGroup.fieldIds[i])
+		}
+		fieldGroups.FieldGroups = append(fieldGroups.FieldGroups, FieldGroup{
+			Id:       uint64(fieldGroup.fieldGroupId),
+			Name:     *stringPtr(&fieldGroup.fieldGroupName[0]),
+			FieldIds: fieldIds,
+		})
+	}
 	return
 }
 
@@ -67,7 +111,7 @@ func WatchFields(gpuId uint, fieldsGroup FieldHandle, groupName string) (groupId
 
 	result := C.dcgmWatchFields(handle.handle, group.handle, fieldsGroup.handle, C.longlong(defaultUpdateFreq), C.double(defaultMaxKeepAge), C.int(defaultMaxKeepSamples))
 	if err = errorString(result); err != nil {
-		return groupId, fmt.Errorf("Error watching fields: %s", err)
+		return groupId, fmt.Errorf("error watching fields: %s", err)
 	}
 
 	_ = UpdateAllFields()
@@ -79,7 +123,7 @@ func WatchFieldsWithGroupEx(fieldsGroup FieldHandle, group GroupHandle, updateFr
 		C.longlong(updateFreq), C.double(maxKeepAge), C.int(maxKeepSamples))
 
 	if err := errorString(result); err != nil {
-		return fmt.Errorf("Error watching fields: %s", err)
+		return fmt.Errorf("error watching fields: %s", err)
 	}
 
 	if err := UpdateAllFields(); err != nil {
@@ -99,7 +143,7 @@ func GetLatestValuesForFields(gpu uint, fields []Short) ([]FieldValue_v1, error)
 
 	result := C.dcgmGetLatestValuesForFields(handle.handle, C.int(gpu), &cfields[0], C.uint(len(fields)), &values[0])
 	if err := errorString(result); err != nil {
-		return nil, fmt.Errorf("Error watching fields: %s", err)
+		return nil, fmt.Errorf("error watching fields: %s", err)
 	}
 
 	return toFieldValue(values), nil
@@ -111,7 +155,7 @@ func EntityGetLatestValues(entityGroup Field_Entity_Group, entityId uint, fields
 
 	result := C.dcgmEntityGetLatestValues(handle.handle, C.dcgm_field_entity_group_t(entityGroup), C.int(entityId), cfields, C.uint(len(fields)), &values[0])
 	if err := errorString(result); err != nil {
-		return nil, fmt.Errorf("Error getting the latest value for fields: %s", err)
+		return nil, fmt.Errorf("error getting the latest value for fields: %s", err)
 	}
 
 	return toFieldValue(values), nil
@@ -128,10 +172,39 @@ func EntitiesGetLatestValues(entities []GroupEntityPair, fields []Short, flags u
 
 	result := C.dcgmEntitiesGetLatestValues(handle.handle, &cPtrEntities[0], C.uint(len(entities)), cfields, C.uint(len(fields)), C.uint(flags), &values[0])
 	if err := errorString(result); err != nil {
-		return nil, fmt.Errorf("Error getting the latest value for fields: %s", err)
+		return nil, fmt.Errorf("error getting the latest value for fields: %s", err)
 	}
 
 	return toFieldValue_v2(values), nil
+}
+
+func GetLatestValues(groupId uint64, fieldGroupId uint64) (fieldValues map[GroupEntityPair][]FieldValue_v1, err error) {
+	fieldValues = make(map[GroupEntityPair][]FieldValue_v1)
+	h := cgo.NewHandle(fieldValues)
+	result := C.dcgmGetLatestValues_v2(handle.handle, C.ulong(groupId), C.ulong(fieldGroupId), (C.dcgmFieldValueEntityEnumeration_f)(unsafe.Pointer(C.listFieldValues_cgo)), unsafe.Pointer(&h))
+	if err := errorString(result); err != nil {
+		return fieldValues, fmt.Errorf("error getting the latest value for fields: %s", err)
+	}
+	return
+}
+
+//export listFieldValues
+func listFieldValues(entityGroupId C.dcgm_field_entity_group_t, entityId C.dcgm_field_eid_t, values *C.dcgmFieldValue_v1, numValues int, userData unsafe.Pointer) int {
+	var entityKey GroupEntityPair
+	h := *(*cgo.Handle)(userData)
+	val := h.Value().(map[GroupEntityPair][]FieldValue_v1)
+	entityKey.EntityGroupId = Field_Entity_Group(entityGroupId)
+	entityKey.EntityId = uint(entityId)
+	fieldValue := FieldValue_v1{
+		Version:   uint(values.version),
+		FieldId:   uint(values.fieldId),
+		FieldType: uint(values.fieldType),
+		Status:    int(values.status),
+		Ts:        int64(values.ts),
+		Value:     values.value,
+	}
+	val[entityKey] = append(val[entityKey], fieldValue)
+	return 0
 }
 
 func UpdateAllFields() error {

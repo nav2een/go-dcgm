@@ -47,7 +47,7 @@ func getAllDeviceCount() (gpuCount uint, err error) {
 
 	result := C.dcgmGetAllDevices(handle.handle, &gpuIdList[0], &count)
 	if err = errorString(result); err != nil {
-		return gpuCount, fmt.Errorf("Error getting devices count: %s", err)
+		return gpuCount, fmt.Errorf("error getting devices count: %s", err)
 	}
 	gpuCount = uint(count)
 	return
@@ -60,7 +60,7 @@ func getSupportedDevices() (gpus []uint, err error) {
 
 	result := C.dcgmGetAllSupportedDevices(handle.handle, &gpuIdList[0], &count)
 	if err = errorString(result); err != nil {
-		return gpus, fmt.Errorf("Error getting DCGM supported devices: %s", err)
+		return gpus, fmt.Errorf("error getting DCGM supported devices: %s", err)
 	}
 
 	numGpus := int(count)
@@ -100,7 +100,7 @@ func getPciBandwidth(gpuId uint) (int64, error) {
 	if err != nil {
 		_ = FieldGroupDestroy(fieldsId)
 		_ = DestroyGroup(groupId)
-		return 0, fmt.Errorf("Error getting Pcie bandwidth: %s", err)
+		return 0, fmt.Errorf("error getting Pcie bandwidth: %s", err)
 	}
 
 	gen := values[maxLinkGen].Int64()
@@ -152,7 +152,7 @@ func getCPUAffinity(gpuId uint) (string, error) {
 
 	values, err := GetLatestValuesForFields(gpuId, affFields)
 	if err != nil {
-		return "N/A", fmt.Errorf("Error getting cpu affinity: %s", err)
+		return "N/A", fmt.Errorf("error getting cpu affinity: %s", err)
 	}
 
 	bits := make([]uint64, 4)
@@ -172,7 +172,7 @@ func getDeviceInfo(gpuid uint) (deviceInfo Device, err error) {
 
 	result := C.dcgmGetDeviceAttributes(handle.handle, C.uint(gpuid), &device)
 	if err = errorString(result); err != nil {
-		return deviceInfo, fmt.Errorf("Error getting device information: %s", err)
+		return deviceInfo, fmt.Errorf("error getting device information: %s", err)
 	}
 
 	// check if the given GPU is DCGM supported
