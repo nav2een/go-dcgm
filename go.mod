@@ -1,4 +1,4 @@
-module github.com/nav2een/go-dcgm
+module github.com/NVIDIA/go-dcgm
 
 go 1.18
 

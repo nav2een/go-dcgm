@@ -63,8 +63,34 @@ func FieldGroupCreate(fieldsGroupName string, fields []Short) (fieldsId FieldHan
 	return
 }
 
+// Create field group and return its id instead of field group handle
+func FieldGroupCreateAndReturnId(fieldsGroupName string, fields []Short) (fieldsId uint64, err error) {
+	var fieldsGroup C.dcgmFieldGrp_t
+	cfields := *(*[]C.ushort)(unsafe.Pointer(&fields))
+
+	groupName := C.CString(fieldsGroupName)
+	defer freeCString(groupName)
+
+	result := C.dcgmFieldGroupCreate(handle.handle, C.int(len(fields)), &cfields[0], groupName, &fieldsGroup)
+	if err = errorString(result); err != nil {
+		return fieldsId, fmt.Errorf("error creating DCGM fields group: %s", err)
+	}
+
+	fieldsId = uint64(fieldsGroup)
+	return
+}
+
 func FieldGroupDestroy(fieldsGroup FieldHandle) (err error) {
 	result := C.dcgmFieldGroupDestroy(handle.handle, fieldsGroup.handle)
+	if err = errorString(result); err != nil {
+		return fmt.Errorf("error destroying DCGM fields group: %s", err)
+	}
+	return
+}
+
+// Destroy field group for given ID
+func FieldGroupDestroyById(fieldGroupId uint64) (err error) {
+	result := C.dcgmFieldGroupDestroy(handle.handle, C.ulong(fieldGroupId))
 	if err = errorString(result); err != nil {
 		return fmt.Errorf("error destroying DCGM fields group: %s", err)
 	}
@@ -116,6 +142,18 @@ func WatchFields(gpuId uint, fieldsGroup FieldHandle, groupName string) (groupId
 
 	_ = UpdateAllFields()
 	return group, nil
+}
+
+// Watch fields for given group and field group id
+func WatchFieldsSimple(groupId uint64, fieldGroupId uint64, updateFreq int64, maxKeepAge float64, maxKeepSamples int32) (err error) {
+	result := C.dcgmWatchFields(handle.handle, C.ulong(groupId), C.ulong(fieldGroupId), C.longlong(updateFreq), C.double(maxKeepAge), C.int(maxKeepSamples))
+	if err := errorString(result); err != nil {
+		return fmt.Errorf("error watching fields: %s", err)
+	}
+	if err := UpdateAllFields(); err != nil {
+		return err
+	}
+	return
 }
 
 func WatchFieldsWithGroupEx(fieldsGroup FieldHandle, group GroupHandle, updateFreq int64, maxKeepAge float64, maxKeepSamples int32) error {
