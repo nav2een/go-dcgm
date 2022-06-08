@@ -145,13 +145,21 @@ func WatchFields(gpuId uint, fieldsGroup FieldHandle, groupName string) (groupId
 }
 
 // Watch fields for given group and field group id
-func WatchFieldsSimple(groupId uint64, fieldGroupId uint64, updateFreq int64, maxKeepAge float64, maxKeepSamples int32) (err error) {
+func WatchFields2(groupId uint64, fieldGroupId uint64, updateFreq int64, maxKeepAge float64, maxKeepSamples int32) (err error) {
 	result := C.dcgmWatchFields(handle.handle, C.ulong(groupId), C.ulong(fieldGroupId), C.longlong(updateFreq), C.double(maxKeepAge), C.int(maxKeepSamples))
 	if err := errorString(result); err != nil {
 		return fmt.Errorf("error watching fields: %s", err)
 	}
 	if err := UpdateAllFields(); err != nil {
 		return err
+	}
+	return
+}
+
+func UnwatchFields(groupId uint64, fieldGroupId uint64) (err error) {
+	result := C.dcgmUnwatchFields(handle.handle, C.ulong(groupId), C.ulong(fieldGroupId))
+	if err := errorString(result); err != nil {
+		return fmt.Errorf("error unwatching fields: %s", err)
 	}
 	return
 }
@@ -216,9 +224,11 @@ func EntitiesGetLatestValues(entities []GroupEntityPair, fields []Short, flags u
 	return toFieldValue_v2(values), nil
 }
 
+// Get latest values for fields using function callback to c
 func GetLatestValues(groupId uint64, fieldGroupId uint64) (fieldValues map[GroupEntityPair][]FieldValue_v1, err error) {
 	fieldValues = make(map[GroupEntityPair][]FieldValue_v1)
 	h := cgo.NewHandle(fieldValues)
+	defer h.Delete()
 	result := C.dcgmGetLatestValues_v2(handle.handle, C.ulong(groupId), C.ulong(fieldGroupId), (C.dcgmFieldValueEntityEnumeration_f)(unsafe.Pointer(C.listFieldValues_cgo)), unsafe.Pointer(&h))
 	if err := errorString(result); err != nil {
 		return fieldValues, fmt.Errorf("error getting the latest value for fields: %s", err)
