@@ -685,6 +685,16 @@ typedef unsigned int dcgm_field_eid_t;
 #define DCGM_FI_DEV_FB_USED 252
 
 /**
+ * Reserved Frame Buffer in MB
+ */
+#define DCGM_FI_DEV_FB_RESERVED 253
+
+/**
+ * Percentage used (Used+Reserved/Total) of Frame Buffer. Range 0.0-1.0
+ */
+#define DCGM_FI_DEV_FB_USED_PERCENT 254
+
+/**
  * Current ECC mode for the device
  */
 #define DCGM_FI_DEV_ECC_CURRENT 300
@@ -1271,7 +1281,7 @@ typedef unsigned int dcgm_field_eid_t;
 #define DCGM_FI_DEV_VGPU_MEMORY_USAGE 525
 
 /**
- * License status of the vGPU instance
+ * License status of the vGPU
  */
 #define DCGM_FI_DEV_VGPU_LICENSE_STATUS 526
 
@@ -1301,9 +1311,14 @@ typedef unsigned int dcgm_field_eid_t;
 #define DCGM_FI_DEV_VGPU_FBC_SESSIONS_INFO 531
 
 /**
- * License status of the vGPU host
+ * License state information of the vGPU instance
  */
-#define DCGM_FI_DEV_VGPU_LICENSE_INSTANCE_STATUS 532
+#define DCGM_FI_DEV_VGPU_LICENSE_INSTANCE_STATE 532
+
+/**
+ * PCI Id of the vGPU instance
+ */
+#define DCGM_FI_DEV_VGPU_PCI_ID 533
 
 /**
  * Starting field ID of the vGPU instance
@@ -2143,9 +2158,19 @@ typedef unsigned int dcgm_field_eid_t;
 #define DCGM_FI_PROF_NVLINK_RX_BYTES 1012
 
 /**
+ * The ratio of cycles the tensor (IMMA) pipe is active (off the peak sustained elapsed cycles)
+ */
+#define DCGM_FI_PROF_PIPE_TENSOR_IMMA_ACTIVE 1013
+
+/**
+ * The ratio of cycles the tensor (HMMA) pipe is active (off the peak sustained elapsed cycles)
+ */
+#define DCGM_FI_PROF_PIPE_TENSOR_HMMA_ACTIVE 1014
+
+/**
  * 1 greater than maximum fields above. This is the 1 greater than the maximum field id that could be allocated
  */
-#define DCGM_FI_MAX_FIELDS 1013
+#define DCGM_FI_MAX_FIELDS 1015
 
 
 /** @} */

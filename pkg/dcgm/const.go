@@ -134,6 +134,8 @@ const (
 	DCGM_FI_DEV_FB_TOTAL                          = 250
 	DCGM_FI_DEV_FB_FREE                           = 251
 	DCGM_FI_DEV_FB_USED                           = 252
+	DCGM_FI_DEV_FB_RESERVED                       = 253
+	DCGM_FI_DEV_FB_USED_PERCENT                   = 254
 	DCGM_FI_DEV_ECC_CURRENT                       = 300
 	DCGM_FI_DEV_ECC_PENDING                       = 301
 	DCGM_FI_DEV_ECC_SBE_VOL_TOTAL                 = 310
@@ -387,7 +389,9 @@ const (
 	DCGM_FI_PROF_PCIE_RX_BYTES                    = 1010
 	DCGM_FI_PROF_NVLINK_TX_BYTES                  = 1011
 	DCGM_FI_PROF_NVLINK_RX_BYTES                  = 1012
-	DCGM_FI_MAX_FIELDS                            = 1013
+	DCGM_FI_PROF_PIPE_TENSOR_IMMA_ACTIVE          = 1013
+	DCGM_FI_PROF_PIPE_TENSOR_HMMA_ACTIVE          = 1014
+	DCGM_FI_MAX_FIELDS                            = 1015
 )
 
 var (
@@ -483,6 +487,8 @@ var (
 		"DCGM_FI_DEV_FB_TOTAL":                          250,
 		"DCGM_FI_DEV_FB_FREE":                           251,
 		"DCGM_FI_DEV_FB_USED":                           252,
+		"DCGM_FI_DEV_FB_RESERVED":                       253,
+		"DCGM_FI_DEV_FB_USED_PERCENT":                   254,
 		"DCGM_FI_DEV_ECC_CURRENT":                       300,
 		"DCGM_FI_DEV_ECC_PENDING":                       301,
 		"DCGM_FI_DEV_ECC_SBE_VOL_TOTAL":                 310,
@@ -736,7 +742,9 @@ var (
 		"DCGM_FI_PROF_PCIE_RX_BYTES":                    1010,
 		"DCGM_FI_PROF_NVLINK_TX_BYTES":                  1011,
 		"DCGM_FI_PROF_NVLINK_RX_BYTES":                  1012,
-		"DCGM_FI_MAX_FIELDS":                            1013,
+		"DCGM_FI_PROF_PIPE_TENSOR_IMMA_ACTIVE":          1013,
+		"DCGM_FI_PROF_PIPE_TENSOR_HMMA_ACTIVE":          1014,
+		"DCGM_FI_MAX_FIELDS":                            1015,
 	}
 )
 
